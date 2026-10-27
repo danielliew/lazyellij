@@ -6,11 +6,11 @@ Fuzzy Zellij session picker with a preview pane — plus optional zsh Tab comple
 lazyellij ›
 > rusty-zebra
   scratch
-  ┌─ preview ─────────────────────────┐
-  │ session  rusty-zebra               │
-  │ Created 2d ago (current)           │
-  │ … layout dump …                    │
-  └────────────────────────────────────┘
+  ┌─ preview ────────────────┐
+  │ session  rusty-zebra     │
+  │ Created 2d ago (current) │
+  │ … layout dump …          │
+  └──────────────────────────┘
 ```
 
 ## Requirements
