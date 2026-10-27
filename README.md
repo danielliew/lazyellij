@@ -29,23 +29,41 @@ chmod +x ~/workplace/lazyellij/bin/lzj
 Add to `~/.zshrc`:
 
 ```zsh
+# Required for the picker
 export PATH="$HOME/workplace/lazyellij/bin:$PATH"
 
-# Optional: Tab-complete `zellij attach <session>`
+# Optional: Tab-complete session names on `zellij a` / attach / kill / delete / watch
+# (names + metadata only — no fzf preview; that is lzj only)
 autoload -Uz compinit && compinit
 source "$HOME/workplace/lazyellij/completions/zellij-sessions.zsh"
 
-# Optional: lzj completion
+# Optional: Tab-complete `lzj` itself
 fpath=("$HOME/workplace/lazyellij/completions" $fpath)
 ```
 
 ## Usage
 
+### Picker (`lzj`) — fuzzy list + preview
+
 ```bash
-lzj              # open picker
+lzj              # open fzf picker with preview pane
 lzj work         # attach to "work" (create if missing)
 lzj ls           # list session names
 ```
+
+`zellij a` / `zellij attach` are unchanged: they do **not** open this picker. Use `lzj` for preview.
+
+### Tab completion (`zellij a`) — optional
+
+With the completer sourced above, Tab on session args works:
+
+```bash
+zellij a <Tab>           # lists sessions (name + created/current metadata)
+zellij attach <Tab>
+zellij kill-session <Tab>
+```
+
+This only completes names in the shell. It does not show the fzf preview pane.
 
 ### Picker keys
 
