@@ -1,0 +1,119 @@
+#!/usr/bin/env bash
+# lazyellij — fuzzy Zellij session picker with preview
+set -euo pipefail
+
+SELF="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lzj"
+
+usage() {
+  cat <<'EOF'
+lazyellij (lzj) — fuzzy picker for Zellij sessions
+
+Usage:
+  lzj                  Open the session picker
+  lzj <name>           Attach to <name> (create if missing)
+  lzj ls               List sessions (short names)
+  lzj help             Show this help
+
+Picker keys:
+  enter   attach (create if missing)
+  ctrl-n  create a new named session (detached), then reload
+  ctrl-d  kill selected session
+  ctrl-x  delete selected session (force if running)
+  ctrl-r  reload list
+  esc     cancel
+EOF
+}
+
+need() {
+  command -v "$1" >/dev/null 2>&1 || {
+    echo "lazyellij: missing dependency: $1" >&2
+    exit 1
+  }
+}
+
+list_sessions_short() {
+  zellij list-sessions --short --no-formatting 2>/dev/null || true
+}
+
+list_sessions_detail() {
+  zellij list-sessions --no-formatting 2>/dev/null || true
+}
+
+cmd_preview() {
+  local name="${1:-}"
+  [[ -z "$name" ]] && return 0
+  printf 'session  %s\n' "$name"
+  printf '────────\n'
+  local meta
+  meta="$(list_sessions_detail | grep -F -- "$name" || true)"
+  if [[ -n "$meta" ]]; then
+    printf '%s\n' "$meta"
+  else
+    printf '(no metadata)\n'
+  fi
+  printf '\n'
+  # Layout dump for running sessions (best-effort)
+  if ! zellij --session "$name" action dump-layout 2>/dev/null | head -n 100; then
+    printf '(layout unavailable — session may be exited or detached)\n'
+  fi
+}
+
+attach_or_create() {
+  local name="$1"
+  if list_sessions_short | grep -Fxq -- "$name"; then
+    exec zellij attach -- "$name"
+  else
+    exec zellij attach --create -- "$name"
+  fi
+}
+
+picker() {
+  need zellij
+  need fzf
+
+  local selected
+  selected="$(
+    list_sessions_short | fzf \
+      --prompt='lazyellij › ' \
+      --header='enter:attach  ^n:new  ^d:kill  ^x:delete  ^r:reload' \
+      --preview="$SELF preview {}" \
+      --preview-window='right:55%:wrap' \
+      --bind='ctrl-r:reload(zellij list-sessions --short --no-formatting 2>/dev/null || true)' \
+      --bind='ctrl-n:execute(bash -c '\''read -r -p "new session name: " n && [[ -n "$n" ]] && zellij attach --create-background -- "$n"'\'')+reload(zellij list-sessions --short --no-formatting 2>/dev/null || true)' \
+      --bind='ctrl-d:execute(zellij kill-session {+} 2>/dev/null || true)+reload(zellij list-sessions --short --no-formatting 2>/dev/null || true)' \
+      --bind='ctrl-x:execute(zellij delete-session --force {+} 2>/dev/null || true)+reload(zellij list-sessions --short --no-formatting 2>/dev/null || true)' \
+      --exit-0
+  )" || true
+
+  [[ -z "${selected:-}" ]] && exit 0
+  attach_or_create "$selected"
+}
+
+main() {
+  case "${1:-}" in
+    "" )
+      picker
+      ;;
+    help|-h|--help )
+      usage
+      ;;
+    ls|list )
+      list_sessions_short
+      ;;
+    preview )
+      shift
+      cmd_preview "${1:-}"
+      ;;
+    -* )
+      echo "lazyellij: unknown option: $1" >&2
+      usage >&2
+      exit 2
+      ;;
+    * )
+      need zellij
+      attach_or_create "$1"
+      ;;
+  esac
+}
+
+main "$@"

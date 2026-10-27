@@ -1,0 +1,31 @@
+#compdef lzj
+
+# zsh completion for lazyellij (lzj)
+
+_lzj_sessions() {
+  local -a sessions
+  local line name desc
+  while IFS= read -r line; do
+    [[ -z $line ]] && continue
+    name=${line%% *}
+    desc=${${line#* }:-session}
+    sessions+=("$name:$desc")
+  done < <(zellij list-sessions --no-formatting 2>/dev/null)
+  _describe -t sessions 'zellij session' sessions
+}
+
+_lzj() {
+  local -a commands
+  commands=(
+    'ls:list session names'
+    'help:show help'
+  )
+
+  if (( CURRENT == 2 )); then
+    _alternative \
+      'commands:command:(($commands))' \
+      'sessions:session:_lzj_sessions'
+  fi
+}
+
+_lzj "$@"
